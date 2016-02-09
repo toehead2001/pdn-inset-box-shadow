@@ -88,7 +88,8 @@ namespace InsetBoxShadowEffect
             Amount1,
             Amount2,
             Amount3,
-            Amount4
+            Amount4,
+            Amount5
         }
 
 
@@ -99,6 +100,7 @@ namespace InsetBoxShadowEffect
             props.Add(new Int32Property(PropertyNames.Amount1, 15, 0, 100));
             props.Add(new Int32Property(PropertyNames.Amount2, 1, 1, 100));
             props.Add(new Int32Property(PropertyNames.Amount3, 20, 0, 100));
+            props.Add(new Int32Property(PropertyNames.Amount5, 255, 0, 255));
             props.Add(new Int32Property(PropertyNames.Amount4, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff));
 
             return new PropertyCollection(props);
@@ -113,6 +115,8 @@ namespace InsetBoxShadowEffect
             configUI.SetPropertyControlValue(PropertyNames.Amount3, ControlInfoPropertyNames.DisplayName, "Blur");
             configUI.SetPropertyControlValue(PropertyNames.Amount4, ControlInfoPropertyNames.DisplayName, "Color");
             configUI.SetPropertyControlType(PropertyNames.Amount4, PropertyControlType.ColorWheel);
+            configUI.SetPropertyControlValue(PropertyNames.Amount5, ControlInfoPropertyNames.DisplayName, "Opacity");
+            configUI.SetPropertyControlValue(PropertyNames.Amount5, ControlInfoPropertyNames.ControlColors, new ColorBgra[] { ColorBgra.White, ColorBgra.Black });
 
             return configUI;
         }
@@ -123,6 +127,7 @@ namespace InsetBoxShadowEffect
             Amount2 = newToken.GetProperty<Int32Property>(PropertyNames.Amount2).Value;
             Amount3 = newToken.GetProperty<Int32Property>(PropertyNames.Amount3).Value;
             Amount4 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount4).Value);
+            Amount5 = newToken.GetProperty<Int32Property>(PropertyNames.Amount5).Value;
 
 
             if (shadowSurface == null)
@@ -172,6 +177,7 @@ namespace InsetBoxShadowEffect
         int Amount2 = 20; // [0,100] Spread
         int Amount3 = 20; // [0,100] Blur
         ColorBgra Amount4 = ColorBgra.FromBgr(0, 0, 0); // Color
+        int Amount5 = 255; // [0,255] Opacity
 
         BinaryPixelOp normalOp = LayerBlendModeUtil.CreateCompositionOp(LayerBlendMode.Normal);
         Surface shadowSurface;
@@ -198,9 +204,15 @@ namespace InsetBoxShadowEffect
                     sourcePixel = src[x, y];
                     shadowPixel = dst[x, y];
 
-                    // Erase the margins
                     if (x < selection.Left + Amount1 || x > selection.Right - Amount1 - 1 || y < selection.Top + Amount1 || y > selection.Bottom - Amount1 - 1)
+                    {
+                        // Erase the margins
                         shadowPixel.A = 0;
+                    }
+                    else
+                    {
+                        shadowPixel.A = Int32Util.ClampToByte(shadowPixel.A * Amount5 / 255);
+                    }
 
                     dst[x, y] = normalOp.Apply(sourcePixel, shadowPixel);
                 }
