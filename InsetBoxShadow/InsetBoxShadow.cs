@@ -95,9 +95,12 @@ namespace InsetBoxShadowEffect
 
         protected override PropertyCollection OnCreatePropertyCollection()
         {
+            Rectangle selection = EnvironmentParameters.GetSelection(EnvironmentParameters.SourceSurface.Bounds).GetBoundsInt();
+            int marginMax = (int)Math.Min(selection.Height / 2.5, selection.Width / 2.5);
+
             List<Property> props = new List<Property>();
 
-            props.Add(new Int32Property(PropertyNames.Amount1, 15, 0, 100));
+            props.Add(new Int32Property(PropertyNames.Amount1, 15, 0, marginMax));
             props.Add(new Int32Property(PropertyNames.Amount2, 1, 1, 100));
             props.Add(new Int32Property(PropertyNames.Amount3, 20, 0, 100));
             props.Add(new Int32Property(PropertyNames.Amount5, 255, 0, 255));
