@@ -187,14 +187,21 @@ namespace InsetBoxShadowEffect
 
         void Render(Surface dst, Surface src, Rectangle rect)
         {
-            // Setup for calling the Gaussian Blur effect
-            GaussianBlurEffect blurEffect = new GaussianBlurEffect();
-            PropertyCollection blurProps = blurEffect.CreatePropertyCollection();
-            PropertyBasedEffectConfigToken BlurParameters = new PropertyBasedEffectConfigToken(blurProps);
-            BlurParameters.SetPropertyValue(GaussianBlurEffect.PropertyNames.Radius, Amount3);
-            blurEffect.SetRenderInfo(BlurParameters, new RenderArgs(dst), new RenderArgs(shadowSurface));
-            // Call the Gaussian Blur function
-            blurEffect.Render(new Rectangle[1] {rect},0,1);
+            if (Amount3 != 0)
+            {
+                // Setup for calling the Gaussian Blur effect
+                GaussianBlurEffect blurEffect = new GaussianBlurEffect();
+                PropertyCollection blurProps = blurEffect.CreatePropertyCollection();
+                PropertyBasedEffectConfigToken BlurParameters = new PropertyBasedEffectConfigToken(blurProps);
+                BlurParameters.SetPropertyValue(GaussianBlurEffect.PropertyNames.Radius, Amount3);
+                blurEffect.SetRenderInfo(BlurParameters, new RenderArgs(dst), new RenderArgs(shadowSurface));
+                // Call the Gaussian Blur function
+                blurEffect.Render(new Rectangle[1] { rect }, 0, 1);
+            }
+            else
+            {
+                dst.CopySurface(shadowSurface, rect.Location, rect);
+            }
 
             Rectangle selection = EnvironmentParameters.GetSelection(src.Bounds).GetBoundsInt();
             ColorBgra sourcePixel, shadowPixel;
