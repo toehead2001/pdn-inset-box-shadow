@@ -89,7 +89,9 @@ namespace InsetBoxShadowEffect
             Amount2,
             Amount3,
             Amount4,
-            Amount5
+            Amount5,
+            Amount6,
+            Amount7
         }
 
 
@@ -97,10 +99,14 @@ namespace InsetBoxShadowEffect
         {
             Rectangle selection = EnvironmentParameters.GetSelection(EnvironmentParameters.SourceSurface.Bounds).GetBoundsInt();
             int marginMax = (int)Math.Min(selection.Height / 2.5, selection.Width / 2.5);
+            int offsetXMax = selection.Width;
+            int offsetYMax = selection.Height;
 
             List<Property> props = new List<Property>();
 
             props.Add(new Int32Property(PropertyNames.Amount1, 15, 0, marginMax));
+            props.Add(new Int32Property(PropertyNames.Amount6, 0, -offsetXMax, offsetXMax));
+            props.Add(new Int32Property(PropertyNames.Amount7, 0, -offsetYMax, offsetYMax));
             props.Add(new Int32Property(PropertyNames.Amount2, 1, 1, 100));
             props.Add(new Int32Property(PropertyNames.Amount3, 20, 0, 100));
             props.Add(new Int32Property(PropertyNames.Amount5, 255, 0, 255));
@@ -113,7 +119,9 @@ namespace InsetBoxShadowEffect
         {
             ControlInfo configUI = CreateDefaultConfigUI(props);
 
-            configUI.SetPropertyControlValue(PropertyNames.Amount1, ControlInfoPropertyNames.DisplayName, "Margin");
+            configUI.SetPropertyControlValue(PropertyNames.Amount1, ControlInfoPropertyNames.DisplayName, "Baseline Margin");
+            configUI.SetPropertyControlValue(PropertyNames.Amount6, ControlInfoPropertyNames.DisplayName, "Offset X");
+            configUI.SetPropertyControlValue(PropertyNames.Amount7, ControlInfoPropertyNames.DisplayName, "Offset Y");
             configUI.SetPropertyControlValue(PropertyNames.Amount2, ControlInfoPropertyNames.DisplayName, "Spread");
             configUI.SetPropertyControlValue(PropertyNames.Amount3, ControlInfoPropertyNames.DisplayName, "Blur");
             configUI.SetPropertyControlValue(PropertyNames.Amount4, ControlInfoPropertyNames.DisplayName, "Color");
@@ -131,6 +139,8 @@ namespace InsetBoxShadowEffect
             Amount3 = newToken.GetProperty<Int32Property>(PropertyNames.Amount3).Value;
             Amount4 = ColorBgra.FromOpaqueInt32(newToken.GetProperty<Int32Property>(PropertyNames.Amount4).Value);
             Amount5 = newToken.GetProperty<Int32Property>(PropertyNames.Amount5).Value;
+            Amount6 = newToken.GetProperty<Int32Property>(PropertyNames.Amount6).Value;
+            Amount7 = newToken.GetProperty<Int32Property>(PropertyNames.Amount7).Value;
 
 
             if (shadowSurface == null)
@@ -140,25 +150,32 @@ namespace InsetBoxShadowEffect
 
             Rectangle selection = EnvironmentParameters.GetSelection(srcArgs.Surface.Bounds).GetBoundsInt();
 
-            PointF topStart = new PointF(selection.Left, selection.Top + (Amount1 + Amount2) / 2f);
-            PointF topEnd = new PointF(selection.Right, selection.Top + (Amount1 + Amount2) / 2f);
-            PointF rightStart = new PointF(selection.Right - (Amount1 + Amount2) / 2f, selection.Top);
-            PointF rightEnd = new PointF(selection.Right - (Amount1 + Amount2) / 2f, selection.Bottom);
-            PointF bottomStart = new PointF(selection.Left, selection.Bottom - (Amount1 + Amount2) / 2f);
-            PointF bottomEnd = new PointF(selection.Right, selection.Bottom - (Amount1 + Amount2) / 2f);
-            PointF leftStart = new PointF(selection.Left + (Amount1 + Amount2) / 2f, selection.Top);
-            PointF leftEnd = new PointF(selection.Left + (Amount1 + Amount2) / 2f, selection.Bottom);
+            PointF topStart = new PointF(selection.Left, selection.Top + (Amount1 + Amount2 + Amount7) / 2f);
+            PointF topEnd = new PointF(selection.Right, selection.Top + (Amount1 + Amount2 + Amount7) / 2f);
+            PointF rightStart = new PointF(selection.Right - (Amount1 + Amount2 - Amount6) / 2f, selection.Top);
+            PointF rightEnd = new PointF(selection.Right - (Amount1 + Amount2 - Amount6) / 2f, selection.Bottom);
+            PointF bottomStart = new PointF(selection.Left, selection.Bottom - (Amount1 + Amount2 - Amount7) / 2f);
+            PointF bottomEnd = new PointF(selection.Right, selection.Bottom - (Amount1 + Amount2 - Amount7) / 2f);
+            PointF leftStart = new PointF(selection.Left + (Amount1 + Amount2 + Amount6) / 2f, selection.Top);
+            PointF leftEnd = new PointF(selection.Left + (Amount1 + Amount2 + Amount6) / 2f, selection.Bottom);
 
             using (RenderArgs ra = new RenderArgs(shadowSurface))
             {
                 Graphics shadow = ra.Graphics;
-                using (Pen shadowPen = new Pen(Amount4, Amount1 + Amount2))
+                using (Pen shadowPen = new Pen(Amount4))
                 {
                     // Because DrawRectangle Sucks! 
-                    shadow.DrawLine(shadowPen, topStart, topEnd);
-                    shadow.DrawLine(shadowPen, rightStart, rightEnd);
-                    shadow.DrawLine(shadowPen, bottomStart, bottomEnd);
+                    shadowPen.Width = Amount1 + Amount2 + Amount6;
                     shadow.DrawLine(shadowPen, leftStart, leftEnd);
+
+                    shadowPen.Width = Amount1 + Amount2 - Amount6;
+                    shadow.DrawLine(shadowPen, rightStart, rightEnd);
+
+                    shadowPen.Width = Amount1 + Amount2 + Amount7;
+                    shadow.DrawLine(shadowPen, topStart, topEnd);
+
+                    shadowPen.Width = Amount1 + Amount2 - Amount7;
+                    shadow.DrawLine(shadowPen, bottomStart, bottomEnd);
                 }
             }
 
@@ -181,6 +198,8 @@ namespace InsetBoxShadowEffect
         int Amount3 = 20; // [0,100] Blur
         ColorBgra Amount4 = ColorBgra.FromBgr(0, 0, 0); // Color
         int Amount5 = 255; // [0,255] Opacity
+        int Amount6 = 0; // [-50, 50] Offset X
+        int Amount7 = 0; // [-50, 50] Offset Y
 
         BinaryPixelOp normalOp = LayerBlendModeUtil.CreateCompositionOp(LayerBlendMode.Normal);
         Surface shadowSurface;
@@ -214,7 +233,7 @@ namespace InsetBoxShadowEffect
                     sourcePixel = src[x, y];
                     shadowPixel = dst[x, y];
 
-                    if (x < selection.Left + Amount1 || x > selection.Right - Amount1 - 1 || y < selection.Top + Amount1 || y > selection.Bottom - Amount1 - 1)
+                    if (x < selection.Left + Amount1 + Amount6 || x > selection.Right - Amount1 - 1 + Amount6|| y < selection.Top + Amount1 + Amount7|| y > selection.Bottom - Amount1 - 1 + Amount7)
                     {
                         // Erase the margins
                         shadowPixel.A = 0;
