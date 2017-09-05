@@ -11,75 +11,33 @@ namespace InsetBoxShadowEffect
 {
     public class PluginSupportInfo : IPluginSupportInfo
     {
-        public string Author
-        {
-            get
-            {
-                return ((AssemblyCopyrightAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
-            }
-        }
-        public string Copyright
-        {
-            get
-            {
-                return ((AssemblyDescriptionAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description;
-            }
-        }
-
-        public string DisplayName
-        {
-            get
-            {
-                return ((AssemblyProductAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product;
-            }
-        }
-
-        public Version Version
-        {
-            get
-            {
-                return base.GetType().Assembly.GetName().Version;
-            }
-        }
-
-        public Uri WebsiteUri
-        {
-            get
-            {
-                return new Uri("http://www.getpaint.net/redirect/plugins.html");
-            }
-        }
+        public string Author => ((AssemblyCopyrightAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
+        public string Copyright => ((AssemblyDescriptionAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description;
+        public string DisplayName => ((AssemblyProductAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product;
+        public Version Version => base.GetType().Assembly.GetName().Version;
+        public Uri WebsiteUri => new Uri("http://www.getpaint.net/redirect/plugins.html");
     }
 
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Inset Box Shadow")]
     public class InsetBoxShadowEffectPlugin : PropertyBasedEffect
     {
-        public static string StaticName
-        {
-            get
-            {
-                return "Inset Box Shadow";
-            }
-        }
+        private int Amount1 = 20; // [0,100] Margin
+        private int Amount2 = 20; // [0,100] Spread
+        private int Amount3 = 20; // [0,100] Blur
+        private ColorBgra Amount4 = ColorBgra.Black; // Color
+        private int Amount5 = 255; // [0,255] Opacity
+        private int Amount6 = 0; // [-50, 50] Offset X
+        private int Amount7 = 0; // [-50, 50] Offset Y
 
-        public static Image StaticIcon
-        {
-            get
-            {
-                return new Bitmap(typeof(InsetBoxShadowEffectPlugin), "InsetBoxShadow.png");
-            }
-        }
+        private readonly BinaryPixelOp normalOp = LayerBlendModeUtil.CreateCompositionOp(LayerBlendMode.Normal);
+        private readonly GaussianBlurEffect blurEffect = new GaussianBlurEffect();
+        private Surface shadowSurface;
 
-        public static string SubmenuName
-        {
-            get
-            {
-                return SubmenuNames.Photo;
-            }
-        }
+        private const string StaticName = "Inset Box Shadow";
+        private static readonly Image StaticIcon = new Bitmap(typeof(InsetBoxShadowEffectPlugin), "InsetBoxShadow.png");
 
         public InsetBoxShadowEffectPlugin()
-            : base(StaticName, StaticIcon, SubmenuName, EffectFlags.Configurable)
+            : base(StaticName, StaticIcon, SubmenuNames.Photo, EffectFlags.Configurable)
         {
         }
 
@@ -102,15 +60,16 @@ namespace InsetBoxShadowEffect
             int offsetXMax = selection.Width;
             int offsetYMax = selection.Height;
 
-            List<Property> props = new List<Property>();
-
-            props.Add(new Int32Property(PropertyNames.Amount1, 15, 0, marginMax));
-            props.Add(new Int32Property(PropertyNames.Amount6, 0, -offsetXMax, offsetXMax));
-            props.Add(new Int32Property(PropertyNames.Amount7, 0, -offsetYMax, offsetYMax));
-            props.Add(new Int32Property(PropertyNames.Amount2, 1, 1, 100));
-            props.Add(new Int32Property(PropertyNames.Amount3, 20, 0, 100));
-            props.Add(new Int32Property(PropertyNames.Amount5, 255, 0, 255));
-            props.Add(new Int32Property(PropertyNames.Amount4, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff));
+            List<Property> props = new List<Property>
+            {
+                new Int32Property(PropertyNames.Amount1, 15, 0, marginMax),
+                new Int32Property(PropertyNames.Amount6, 0, -offsetXMax, offsetXMax),
+                new Int32Property(PropertyNames.Amount7, 0, -offsetYMax, offsetYMax),
+                new Int32Property(PropertyNames.Amount2, 1, 1, 100),
+                new Int32Property(PropertyNames.Amount3, 20, 0, 100),
+                new Int32Property(PropertyNames.Amount5, 255, 0, 255),
+                new Int32Property(PropertyNames.Amount4, ColorBgra.ToOpaqueInt32(ColorBgra.FromBgra(EnvironmentParameters.PrimaryColor.B, EnvironmentParameters.PrimaryColor.G, EnvironmentParameters.PrimaryColor.R, 255)), 0, 0xffffff)
+            };
 
             return new PropertyCollection(props);
         }
@@ -148,6 +107,12 @@ namespace InsetBoxShadowEffect
             else
                 shadowSurface.Clear(Color.Transparent);
 
+            // Setup for calling the Gaussian Blur effect
+            PropertyCollection blurProps = blurEffect.CreatePropertyCollection();
+            PropertyBasedEffectConfigToken BlurParameters = new PropertyBasedEffectConfigToken(blurProps);
+            BlurParameters.SetPropertyValue(GaussianBlurEffect.PropertyNames.Radius, Amount3);
+            blurEffect.SetRenderInfo(BlurParameters, dstArgs, new RenderArgs(shadowSurface));
+
             Rectangle selection = EnvironmentParameters.GetSelection(srcArgs.Surface.Bounds).GetBoundsInt();
 
             PointF topStart = new PointF(selection.Left, selection.Top + (Amount1 + Amount2 + Amount7) / 2f);
@@ -159,24 +124,20 @@ namespace InsetBoxShadowEffect
             PointF leftStart = new PointF(selection.Left + (Amount1 + Amount2 + Amount6) / 2f, selection.Top);
             PointF leftEnd = new PointF(selection.Left + (Amount1 + Amount2 + Amount6) / 2f, selection.Bottom);
 
-            using (RenderArgs ra = new RenderArgs(shadowSurface))
+            using (Graphics shadow = new RenderArgs(shadowSurface).Graphics)
+            using (Pen shadowPen = new Pen(Amount4))
             {
-                Graphics shadow = ra.Graphics;
-                using (Pen shadowPen = new Pen(Amount4))
-                {
-                    // Because DrawRectangle Sucks! 
-                    shadowPen.Width = Amount1 + Amount2 + Amount6;
-                    shadow.DrawLine(shadowPen, leftStart, leftEnd);
+                shadowPen.Width = Amount1 + Amount2 + Amount6;
+                shadow.DrawLine(shadowPen, leftStart, leftEnd);
 
-                    shadowPen.Width = Amount1 + Amount2 - Amount6;
-                    shadow.DrawLine(shadowPen, rightStart, rightEnd);
+                shadowPen.Width = Amount1 + Amount2 - Amount6;
+                shadow.DrawLine(shadowPen, rightStart, rightEnd);
 
-                    shadowPen.Width = Amount1 + Amount2 + Amount7;
-                    shadow.DrawLine(shadowPen, topStart, topEnd);
+                shadowPen.Width = Amount1 + Amount2 + Amount7;
+                shadow.DrawLine(shadowPen, topStart, topEnd);
 
-                    shadowPen.Width = Amount1 + Amount2 - Amount7;
-                    shadow.DrawLine(shadowPen, bottomStart, bottomEnd);
-                }
+                shadowPen.Width = Amount1 + Amount2 - Amount7;
+                shadow.DrawLine(shadowPen, bottomStart, bottomEnd);
             }
 
 
@@ -192,30 +153,12 @@ namespace InsetBoxShadowEffect
             }
         }
 
-
-        int Amount1 = 20; // [0,100] Margin
-        int Amount2 = 20; // [0,100] Spread
-        int Amount3 = 20; // [0,100] Blur
-        ColorBgra Amount4 = ColorBgra.FromBgr(0, 0, 0); // Color
-        int Amount5 = 255; // [0,255] Opacity
-        int Amount6 = 0; // [-50, 50] Offset X
-        int Amount7 = 0; // [-50, 50] Offset Y
-
-        BinaryPixelOp normalOp = LayerBlendModeUtil.CreateCompositionOp(LayerBlendMode.Normal);
-        Surface shadowSurface;
-
         void Render(Surface dst, Surface src, Rectangle rect)
         {
             if (Amount3 != 0)
             {
-                // Setup for calling the Gaussian Blur effect
-                GaussianBlurEffect blurEffect = new GaussianBlurEffect();
-                PropertyCollection blurProps = blurEffect.CreatePropertyCollection();
-                PropertyBasedEffectConfigToken BlurParameters = new PropertyBasedEffectConfigToken(blurProps);
-                BlurParameters.SetPropertyValue(GaussianBlurEffect.PropertyNames.Radius, Amount3);
-                blurEffect.SetRenderInfo(BlurParameters, new RenderArgs(dst), new RenderArgs(shadowSurface));
                 // Call the Gaussian Blur function
-                blurEffect.Render(new Rectangle[1] { rect }, 0, 1);
+                blurEffect.Render(new Rectangle[] { rect }, 0, 1);
             }
             else
             {
@@ -223,27 +166,26 @@ namespace InsetBoxShadowEffect
             }
 
             Rectangle selection = EnvironmentParameters.GetSelection(src.Bounds).GetBoundsInt();
-            ColorBgra sourcePixel, shadowPixel;
+            ColorBgra shadowPixel;
 
             for (int y = rect.Top; y < rect.Bottom; y++)
             {
                 if (IsCancelRequested) return;
                 for (int x = rect.Left; x < rect.Right; x++)
                 {
-                    sourcePixel = src[x, y];
                     shadowPixel = dst[x, y];
 
-                    if (x < selection.Left + Amount1 + Amount6 || x > selection.Right - Amount1 - 1 + Amount6|| y < selection.Top + Amount1 + Amount7|| y > selection.Bottom - Amount1 - 1 + Amount7)
+                    if (x < selection.Left + Amount1 + Amount6 || x > selection.Right - Amount1 - 1 + Amount6 || y < selection.Top + Amount1 + Amount7 || y > selection.Bottom - Amount1 - 1 + Amount7)
                     {
                         // Erase the margins
                         shadowPixel.A = 0;
                     }
                     else
                     {
-                        shadowPixel.A = Int32Util.ClampToByte(shadowPixel.A * Amount5 / 255);
+                        shadowPixel.A = Int32Util.ClampToByte(shadowPixel.A * Amount5 / byte.MaxValue);
                     }
 
-                    dst[x, y] = normalOp.Apply(sourcePixel, shadowPixel);
+                    dst[x, y] = normalOp.Apply(src[x, y], shadowPixel);
                 }
             }
         }
