@@ -11,11 +11,11 @@ namespace InsetBoxShadowEffect
 {
     public class PluginSupportInfo : IPluginSupportInfo
     {
-        public string Author => ((AssemblyCopyrightAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
-        public string Copyright => ((AssemblyDescriptionAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description;
-        public string DisplayName => ((AssemblyProductAttribute)base.GetType().Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product;
+        public string Author => base.GetType().Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>().Copyright;
+        public string Copyright => base.GetType().Assembly.GetCustomAttribute<AssemblyDescriptionAttribute>().Description;
+        public string DisplayName => base.GetType().Assembly.GetCustomAttribute<AssemblyProductAttribute>().Product;
         public Version Version => base.GetType().Assembly.GetName().Version;
-        public Uri WebsiteUri => new Uri("http://www.getpaint.net/redirect/plugins.html");
+        public Uri WebsiteUri => new Uri("https://forums.getpaint.net/index.php?showtopic=107381");
     }
 
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Inset Box Shadow")]
@@ -51,7 +51,6 @@ namespace InsetBoxShadowEffect
             Amount6,
             Amount7
         }
-
 
         protected override PropertyCollection OnCreatePropertyCollection()
         {
@@ -101,7 +100,6 @@ namespace InsetBoxShadowEffect
             Amount6 = newToken.GetProperty<Int32Property>(PropertyNames.Amount6).Value;
             Amount7 = newToken.GetProperty<Int32Property>(PropertyNames.Amount7).Value;
 
-
             if (shadowSurface == null)
                 shadowSurface = new Surface(srcArgs.Surface.Size);
             else
@@ -140,7 +138,6 @@ namespace InsetBoxShadowEffect
                 shadow.DrawLine(shadowPen, bottomStart, bottomEnd);
             }
 
-
             base.OnSetRenderInfo(newToken, dstArgs, srcArgs);
         }
 
@@ -153,7 +150,7 @@ namespace InsetBoxShadowEffect
             }
         }
 
-        void Render(Surface dst, Surface src, Rectangle rect)
+        private void Render(Surface dst, Surface src, Rectangle rect)
         {
             if (Amount3 != 0)
             {
