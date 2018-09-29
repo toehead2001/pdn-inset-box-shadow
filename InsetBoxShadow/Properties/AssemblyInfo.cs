@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("inset|box|shadow|frame|border")]
 [assembly: AssemblyCompany("toe_head2001")]
 [assembly: AssemblyProduct("Inset Box Shadow")]
-[assembly: AssemblyCopyright("Copyright © toe_head2001")]
+[assembly: AssemblyCopyright("Copyright © 2018 toe_head2001")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
