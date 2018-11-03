@@ -40,7 +40,7 @@ namespace InsetBoxShadowEffect
         {
         }
 
-        public enum PropertyNames
+        private enum PropertyNames
         {
             Amount1,
             Amount2,
