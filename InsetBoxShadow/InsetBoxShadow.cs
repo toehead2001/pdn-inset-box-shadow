@@ -32,11 +32,10 @@ namespace InsetBoxShadowEffect
         private readonly GaussianBlurEffect blurEffect = new GaussianBlurEffect();
         private Surface shadowSurface;
 
-        private const string StaticName = "Inset Box Shadow";
         private static readonly Image StaticIcon = new Bitmap(typeof(InsetBoxShadowEffectPlugin), "InsetBoxShadow.png");
 
         public InsetBoxShadowEffectPlugin()
-            : base(StaticName, StaticIcon, SubmenuNames.Render, new EffectOptions() { Flags = EffectFlags.Configurable })
+            : base("Inset Box Shadow", StaticIcon, SubmenuNames.Render, new EffectOptions() { Flags = EffectFlags.Configurable })
         {
         }
 
