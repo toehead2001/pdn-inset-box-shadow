@@ -157,6 +157,11 @@ namespace InsetBoxShadowEffect
             }
 
             Rectangle selection = EnvironmentParameters.GetSelection(src.Bounds).GetBoundsInt();
+            Rectangle shadowRect = Rectangle.FromLTRB(
+                selection.Left + margin + offsetX,
+                selection.Top + margin + offsetY,
+                selection.Right - margin + offsetX,
+                selection.Bottom - margin + offsetY);
             ColorBgra shadowPixel;
 
             for (int y = rect.Top; y < rect.Bottom; y++)
@@ -165,16 +170,7 @@ namespace InsetBoxShadowEffect
                 for (int x = rect.Left; x < rect.Right; x++)
                 {
                     shadowPixel = dst[x, y];
-
-                    if (x < selection.Left + margin + offsetX || x > selection.Right - margin - 1 + offsetX || y < selection.Top + margin + offsetY || y > selection.Bottom - margin - 1 + offsetY)
-                    {
-                        // Erase the margins
-                        shadowPixel.A = 0;
-                    }
-                    else
-                    {
-                        shadowPixel.A = Int32Util.ClampToByte(shadowPixel.A * color.A / byte.MaxValue);
-                    }
+                    shadowPixel.A = shadowRect.Contains(x, y) ? Int32Util.ClampToByte(shadowPixel.A * color.A / byte.MaxValue) : byte.MinValue;
 
                     dst[x, y] = normalOp.Apply(src[x, y], shadowPixel);
                 }
