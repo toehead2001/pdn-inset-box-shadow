@@ -36,7 +36,7 @@ namespace InsetBoxShadowEffect
         private static readonly Image StaticIcon = new Bitmap(typeof(InsetBoxShadowEffectPlugin), "InsetBoxShadow.png");
 
         public InsetBoxShadowEffectPlugin()
-            : base(StaticName, StaticIcon, SubmenuNames.Photo, EffectFlags.Configurable)
+            : base(StaticName, StaticIcon, SubmenuNames.Photo, new EffectOptions() { Flags = EffectFlags.Configurable })
         {
         }
 
