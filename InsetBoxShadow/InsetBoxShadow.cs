@@ -21,12 +21,12 @@ namespace InsetBoxShadowEffect
     [PluginSupportInfo(typeof(PluginSupportInfo), DisplayName = "Inset Box Shadow")]
     public class InsetBoxShadowEffectPlugin : PropertyBasedEffect
     {
-        private int margin = 20; // [0,100] Margin
-        private int spread = 20; // [0,100] Spread
-        private int blur = 20; // [0,100] Blur
-        private ColorBgra color = ColorBgra.Black; // Color
-        private int offsetX = 0; // [-50, 50] Offset X
-        private int offsetY = 0; // [-50, 50] Offset Y
+        private int margin = 20;
+        private int spread = 20;
+        private int blur = 20;
+        private ColorBgra color = ColorBgra.Black;
+        private int offsetX = 0;
+        private int offsetY = 0;
 
         private readonly BinaryPixelOp normalOp = LayerBlendModeUtil.CreateCompositionOp(LayerBlendMode.Normal);
         private readonly GaussianBlurEffect blurEffect = new GaussianBlurEffect();
